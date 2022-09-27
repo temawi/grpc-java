@@ -136,6 +136,10 @@ public final class SynchronizationContext implements Executor {
         "Not called from the SynchronizationContext");
   }
 
+  public boolean inThisCynchronizationContext() {
+    return Thread.currentThread() == drainingThread.get();
+  }
+
   /**
    * Schedules a task to be added and run via {@link #execute} after a delay.
    *
