@@ -308,51 +308,44 @@ final class PriorityLoadBalancer extends LoadBalancer {
       @Override
       public void updateBalancingState(final ConnectivityState newState,
           final SubchannelPicker newPicker) {
+        logger.log(XdsLogLevel.INFO, ">>> updateBalancingState(): handlingResolvedAddresses: "
+            + handlingResolvedAddresses);
+        logger.log(XdsLogLevel.INFO, ">>> updateBalancingState(): in sync context: "
+            + syncContext.inThisCynchronizationContext());
+        logger.log(XdsLogLevel.INFO, ">>> updateBalancingState(): newState: "
+            + newState);
+        logger.log(XdsLogLevel.INFO, ">>> updateBalancingState(): newPicker: "
+            + newPicker);
 
-        syncContext.execute(new Runnable() {
-          @Override
-          public void run() {
+        if (!children.containsKey(priority)) {
+          return;
+        }
+        connectivityState = newState;
+        picker = newPicker;
 
-            logger.log(XdsLogLevel.INFO, ">>> updateBalancingState(): handlingResolvedAddresses: "
-                + handlingResolvedAddresses);
-            logger.log(XdsLogLevel.INFO, ">>> updateBalancingState(): in sync context: "
-                + syncContext.inThisCynchronizationContext());
-            logger.log(XdsLogLevel.INFO, ">>> updateBalancingState(): newState: "
-                + newState);
-            logger.log(XdsLogLevel.INFO, ">>> updateBalancingState(): newPicker: "
-                + newPicker);
-
-            if (!children.containsKey(priority)) {
-              return;
-            }
-            connectivityState = newState;
-            picker = newPicker;
-
-            if (deletionTimer != null && deletionTimer.isPending()) {
-              return;
-            }
-            if (newState.equals(CONNECTING)) {
-              if (!failOverTimer.isPending() && seenReadyOrIdleSinceTransientFailure) {
-                failOverTimer = syncContext.schedule(new FailOverTask(), 10, TimeUnit.SECONDS,
-                    executor);
-              }
-            } else if (newState.equals(READY) || newState.equals(IDLE)) {
-              seenReadyOrIdleSinceTransientFailure = true;
-              failOverTimer.cancel();
-            } else if (newState.equals(TRANSIENT_FAILURE)) {
-              seenReadyOrIdleSinceTransientFailure = false;
-              failOverTimer.cancel();
-            }
-
-            // If we are currently handling newly resolved addresses, let's not try to reconfigure as
-            // the address handling process will take care of that to provide an atomic config update.
-            // if (handlingResolvedAddresses) {
-            //   return;
-            // }
-
-            tryNextPriority();
+        if (deletionTimer != null && deletionTimer.isPending()) {
+          return;
+        }
+        if (newState.equals(CONNECTING)) {
+          if (!failOverTimer.isPending() && seenReadyOrIdleSinceTransientFailure) {
+            failOverTimer = syncContext.schedule(new FailOverTask(), 10, TimeUnit.SECONDS,
+                executor);
           }
-        });
+        } else if (newState.equals(READY) || newState.equals(IDLE)) {
+          seenReadyOrIdleSinceTransientFailure = true;
+          failOverTimer.cancel();
+        } else if (newState.equals(TRANSIENT_FAILURE)) {
+          seenReadyOrIdleSinceTransientFailure = false;
+          failOverTimer.cancel();
+        }
+
+        // If we are currently handling newly resolved addresses, let's not try to reconfigure as
+        // the address handling process will take care of that to provide an atomic config update.
+        if (handlingResolvedAddresses) {
+          return;
+        }
+
+        tryNextPriority();
       }
 
       @Override
