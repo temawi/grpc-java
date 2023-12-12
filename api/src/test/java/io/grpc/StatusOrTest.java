@@ -49,8 +49,8 @@ public class StatusOrTest {
 
   @Test
   public void ok() {
-    assertThat(StatusOr.fromResult("test").ok()).isTrue();
-    assertThat(StatusOr.fromStatus(Status.INTERNAL).ok()).isFalse();
+    assertThat(StatusOr.fromResult("test").isOk()).isTrue();
+    assertThat(StatusOr.fromStatus(Status.INTERNAL).isOk()).isFalse();
   }
 
   @Test

@@ -29,7 +29,7 @@ import com.google.common.base.Objects;
  * <p>Will only ever contain either a {@link Status} or a result, never both or neither.
  */
 @ExperimentalApi("") // TODO: Create an issue
-public class StatusOr<T> {
+public final class StatusOr<T> {
 
   private final Status status;
   private final T result;
@@ -72,7 +72,7 @@ public class StatusOr<T> {
    *
    * @return {@code true} if there is a result.
    */
-  public boolean ok() {
+  public boolean isOk() {
     return result != null;
   }
 
@@ -113,7 +113,7 @@ public class StatusOr<T> {
     } else if (result != null) {
       return MoreObjects.toStringHelper(this).add("result", result).toString();
     }
-    throw new IllegalStateException("neither status nor result set");
+    throw new AssertionError("neither status nor result set");
   }
 
 
