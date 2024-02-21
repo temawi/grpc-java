@@ -30,7 +30,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -46,8 +47,9 @@ public class InteropInstrumentationTest {
   private boolean useTestCa;
   private String testCase;
   private ExecutorService executor = Executors.newSingleThreadExecutor();
+  private ManagedChannel channel;
 
-  @Before
+  @BeforeClass
   public void setUp() throws Exception {
     host = InstrumentationRegistry.getArguments().getString("server_host", "10.0.2.2");
     port =
@@ -73,6 +75,14 @@ public class InteropInstrumentationTest {
         Log.i(LOG_TAG, "Failed installing security provider", e);
       }
     }
+
+    channel = TesterOkHttpChannelBuilder.build(host, port, serverHostOverride, useTls, testCa);
+  }
+
+  @AfterClass
+  public void shutdown() {
+    channel.shutdown();
+    channel.awaitTermination();
   }
 
   @Test
@@ -112,9 +122,8 @@ public class InteropInstrumentationTest {
 
     String result = null;
     try {
-      result = executor.submit(new TestCallable(
-              TesterOkHttpChannelBuilder.build(host, port, serverHostOverride, useTls, testCa),
-              testCase)).get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+      result = executor.submit(new TestCallable(channel, testCase)).get(
+          TIMEOUT_SECONDS, TimeUnit.SECONDS);
       assertEquals(testCase + " failed", TestCallable.SUCCESS_MESSAGE, result);
     } catch (ExecutionException | InterruptedException e) {
       result = e.getMessage();
